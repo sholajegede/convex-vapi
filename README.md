@@ -1,21 +1,56 @@
 # convex-vapi
 
-Sync Vapi voice AI calls into your Convex database reactively, and place outbound calls directly from Convex functions.
+Sync Vapi voice AI calls into your Convex database reactively, and place
+outbound calls directly from Convex functions.
 
-[![npm version](https://badge.fury.io/js/convex-vapi.svg)](https://badge.fury.io/js/convex-vapi)
+[![npm version](https://img.shields.io/npm/v/convex-vapi)](https://www.npmjs.com/package/convex-vapi)
+[![Convex Component](https://www.convex.dev/components/badge/sholajegede/convex-vapi)](https://www.convex.dev/components/sholajegede/convex-vapi)
+[![npm downloads](https://img.shields.io/npm/dw/convex-vapi)](https://www.npmjs.com/package/convex-vapi)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
+
+```ts
+const vapi = new Vapi(components.convexVapi, {
+  apiKey: process.env.VAPI_API_KEY!,
+  webhookSecret: process.env.VAPI_WEBHOOK_SECRET!,
+});
+
+// Place a call and get the result back immediately — no waiting on the webhook
+const { callId } = await vapi.createCall(ctx, {
+  assistantId,
+  phoneNumberId,
+  customerNumber,
+});
+
+// Stays live from here — status, transcript, summary, and cost all update
+// reactively as Vapi's webhooks arrive, including from a call ended outside
+// your app, like one you hung up from Vapi's own dashboard
+const call = useQuery(api.example.getCall, { callId });
+```
 
 <!-- START: Include on https://convex.dev/components -->
 
 ## What this does
 
-`convex-vapi` gives your Convex app a live, queryable record of Vapi voice AI calls, kept up to date by Vapi's server-URL webhooks, plus a small set of actions for placing and inspecting calls:
+`convex-vapi` gives your Convex app a live, queryable record of Vapi voice AI
+calls, kept up to date by Vapi's server-URL webhooks, plus a small set of
+actions for placing and inspecting calls:
 
-- **Reactive call tracking** — every `status-update` and `end-of-call-report` webhook event updates a Convex row, so `useQuery` in your React app re-renders as a call rings, connects, and ends, complete with transcript, summary, and recording once available.
-- **Place outbound calls** — call `createCall` from a Convex action to start a phone call through a Vapi assistant.
-- **Non-destructive merges** — a sparser event (e.g. a mid-call status update) never overwrites richer data an earlier event already recorded (e.g. a transcript from the final report).
-- **Secret-verified webhooks** — every inbound webhook is checked against Vapi's `X-Vapi-Secret` header with a constant-time comparison before anything is written.
+- **Reactive call tracking** — every `status-update` and `end-of-call-report`
+  webhook event updates a Convex row, so `useQuery` in your React app re-renders
+  as a call rings, connects, and ends, complete with transcript, summary, and
+  recording once available.
+- **Place outbound calls** — call `createCall` from a Convex action to start a
+  phone call through a Vapi assistant.
+- **Non-destructive merges** — a sparser event (e.g. a mid-call status update)
+  never overwrites richer data an earlier event already recorded (e.g. a
+  transcript from the final report).
+- **Secret-verified webhooks** — every inbound webhook is checked against Vapi's
+  `X-Vapi-Secret` header with a constant-time comparison before anything is
+  written.
 
-This is a [Convex component](https://convex.dev/components): its `calls` and `webhookEvents` tables live in an isolated schema, not your app's schema, and are only reachable through the functions this component exposes.
+This is a [Convex component](https://convex.dev/components): its `calls` and
+`webhookEvents` tables live in an isolated schema, not your app's schema, and
+are only reachable through the functions this component exposes.
 
 ## Table of Contents
 
@@ -28,6 +63,7 @@ This is a [Convex component](https://convex.dev/components): its `calls` and `we
 - [Webhook Events](#webhook-events)
 - [Database Schema](#database-schema)
 - [Authentication](#authentication)
+- [Example App](#example-app)
 - [Testing](#testing)
 - [Limitations](#limitations)
 - [Troubleshooting](#troubleshooting)
@@ -62,7 +98,9 @@ npx convex env set VAPI_API_KEY your-private-api-key
 npx convex env set VAPI_WEBHOOK_SECRET whsec_...
 ```
 
-`VAPI_API_KEY` is your private key from the Vapi dashboard (Settings → API Keys). `VAPI_WEBHOOK_SECRET` is a secret string you choose yourself — you'll configure the same value on the assistant in step 4.
+`VAPI_API_KEY` is your private key from the Vapi dashboard (Settings → API
+Keys). `VAPI_WEBHOOK_SECRET` is a secret string you choose yourself — you'll
+configure the same value on the assistant in step 4.
 
 ### 3. Mount the webhook handler
 
@@ -90,7 +128,10 @@ export default http;
 
 ### 4. Configure the webhook on your assistant
 
-Set the assistant's `serverUrl` to `https://<your-deployment>.convex.site/webhooks/vapi` and its `server.secret` to the same value as `VAPI_WEBHOOK_SECRET`, either in the Vapi dashboard or via the API:
+Set the assistant's `serverUrl` to
+`https://<your-deployment>.convex.site/webhooks/vapi` and its `server.secret` to
+the same value as `VAPI_WEBHOOK_SECRET`, either in the Vapi dashboard or via the
+API:
 
 ```sh
 curl -X PATCH https://api.vapi.ai/assistant/<assistant-id> \
@@ -123,9 +164,13 @@ export const listCallsByAssistant = query({
 
 ## Setup
 
-The component needs no schema changes in your app — its tables (`calls`, `webhookEvents`) live entirely inside the component's own isolated schema. All you need is the webhook mounted (step 3) and secret configured (step 4), plus a `Vapi` client instance wherever you call its methods.
+The component needs no schema changes in your app — its tables (`calls`,
+`webhookEvents`) live entirely inside the component's own isolated schema. All
+you need is the webhook mounted (step 3) and secret configured (step 4), plus a
+`Vapi` client instance wherever you call its methods.
 
-Assistants and phone numbers are managed entirely in the Vapi dashboard or API — this component tracks calls, not the assistants that make them.
+Assistants and phone numbers are managed entirely in the Vapi dashboard or API —
+this component tracks calls, not the assistants that make them.
 
 ## Usage
 
@@ -133,14 +178,19 @@ Assistants and phone numbers are managed entirely in the Vapi dashboard or API �
 
 ```ts
 export const dial = action({
-  args: { assistantId: v.string(), phoneNumberId: v.string(), customerNumber: v.string() },
+  args: {
+    assistantId: v.string(),
+    phoneNumberId: v.string(),
+    customerNumber: v.string(),
+  },
   handler: async (ctx, args) => {
     return await vapi.createCall(ctx, args);
   },
 });
 ```
 
-Returns `{ callId, status }` and immediately records the call in Convex — you don't have to wait for the first webhook to see it in a query.
+Returns `{ callId, status }` and immediately records the call in Convex — you
+don't have to wait for the first webhook to see it in a query.
 
 ### Refresh a call on demand
 
@@ -154,43 +204,53 @@ export const sync = action({
 });
 ```
 
-Fetches the call directly from the Vapi API and re-records it — useful as a fallback if a webhook delivery was missed, or to pull in the transcript/recording immediately after a call ends without waiting on the webhook queue.
+Fetches the call directly from the Vapi API and re-records it — useful as a
+fallback if a webhook delivery was missed, or to pull in the
+transcript/recording immediately after a call ends without waiting on the
+webhook queue.
 
 ### Read calls reactively
 
 ```tsx
-const calls = useQuery(api.example.listCallsByAssistant, { assistantId: "assistant_..." });
+const calls = useQuery(api.example.listCallsByAssistant, {
+  assistantId: "assistant_...",
+});
 ```
 
-Every `status-update` and `end-of-call-report` webhook event patches a row, so this query re-renders live as a call progresses from `queued` through `ringing`, `in-progress`, and `ended` — no polling.
+Every `status-update` and `end-of-call-report` webhook event patches a row, so
+this query re-renders live as a call progresses from `queued` through `ringing`,
+`in-progress`, and `ended` — no polling.
 
 ## API Reference
 
 ### Actions (need `ctx` from an action)
 
-| Method | Description |
-| --- | --- |
-| `createCall(ctx, { assistantId, phoneNumberId, customerNumber })` | Places an outbound call via the REST API and records it. Returns `{ callId, status }`. |
-| `refreshCall(ctx, { callId })` | Re-fetches a call from the Vapi API and re-records its current state, including transcript/summary/recording if the call has ended. |
+| Method                                                            | Description                                                                                                                         |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `createCall(ctx, { assistantId, phoneNumberId, customerNumber })` | Places an outbound call via the REST API and records it. Returns `{ callId, status }`.                                              |
+| `refreshCall(ctx, { callId })`                                    | Re-fetches a call from the Vapi API and re-records its current state, including transcript/summary/recording if the call has ended. |
 
 ### Queries (work from actions, queries, or mutations)
 
-| Method | Description |
-| --- | --- |
-| `getCall(ctx, { callId })` | Fetch one call by its Vapi call id. |
-| `listCallsByAssistant(ctx, { assistantId, limit? })` | Most recently updated calls for an assistant, newest first. |
+| Method                                               | Description                                                                                                                                   |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getCall(ctx, { callId })`                           | Fetch one call by its Vapi call id.                                                                                                           |
+| `listCallsByAssistant(ctx, { assistantId, limit? })` | Most recently updated calls for an assistant, newest first.                                                                                   |
+| `getStats(ctx)`                                      | Aggregate counts across every call and webhook event this deployment has recorded: `{ callCount, endedCount, liveCount, webhookEventCount }`. |
+| `listRecentCalls(ctx, { limit? })`                   | Most recently updated calls across every assistant, newest first.                                                                             |
+| `listRecentWebhookEvents(ctx, { limit? })`           | Most recent webhook deliveries across every call, newest first.                                                                               |
 
 ### Webhook
 
-| Property | Description |
-| --- | --- |
+| Property         | Description                                                                                                                                    |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `webhookHandler` | An `httpAction` that verifies, deduplicates, and processes `status-update` and `end-of-call-report` webhook deliveries. Mount it at any route. |
 
 ## Type Reference
 
 ```ts
 type VapiOptions = {
-  apiKey: string;        // private API key from the Vapi dashboard
+  apiKey: string; // private API key from the Vapi dashboard
   webhookSecret: string; // matches the assistant's server.secret
 };
 
@@ -205,7 +265,7 @@ type Call = {
   assistantId?: string;
   phoneNumberId?: string;
   customerNumber?: string;
-  status: string;         // "queued" | "ringing" | "in-progress" | "forwarding" | "ended" | ...
+  status: string; // "queued" | "ringing" | "in-progress" | "forwarding" | "ended" | ...
   endedReason?: string;
   transcript?: string;
   summary?: string;
@@ -220,14 +280,24 @@ type Call = {
 
 ## Webhook Events
 
-The webhook handler processes two of Vapi's server message types (all others are recorded for idempotency but otherwise ignored — see Limitations):
+The webhook handler processes two of Vapi's server message types (all others are
+recorded for idempotency but otherwise ignored — see Limitations):
 
-- **`status-update`** — updates the call's `status` field (`queued`, `ringing`, `in-progress`, `forwarding`, `ended`, ...) as the call progresses.
-- **`end-of-call-report`** — the final summary sent once a call ends; records `endedReason`, `transcript`, `summary`, `recordingUrl`, and `cost`.
+- **`status-update`** — updates the call's `status` field (`queued`, `ringing`,
+  `in-progress`, `forwarding`, `ended`, ...) as the call progresses.
+- **`end-of-call-report`** — the final summary sent once a call ends; records
+  `endedReason`, `transcript`, `summary`, `recordingUrl`, and `cost`.
 
-Every request is checked against the `X-Vapi-Secret` header with a constant-time comparison against your configured `webhookSecret` before anything is written. Vapi does not include a per-delivery id in its webhook headers, so duplicate detection here hashes the raw request body with SHA-256 — an identical payload delivered twice is treated as a duplicate and skipped.
+Every request is checked against the `X-Vapi-Secret` header with a constant-time
+comparison against your configured `webhookSecret` before anything is written.
+Vapi does not include a per-delivery id in its webhook headers, so duplicate
+detection here hashes the raw request body with SHA-256 — an identical payload
+delivered twice is treated as a duplicate and skipped.
 
-Calls are recorded with a merge, not a blind overwrite: fields missing from the current event (e.g. `transcript` on a mid-call `status-update`) fall back to whatever was already stored, so a later, sparser event can never blank out data an earlier, richer one recorded.
+Calls are recorded with a merge, not a blind overwrite: fields missing from the
+current event (e.g. `transcript` on a mid-call `status-update`) fall back to
+whatever was already stored, so a later, sparser event can never blank out data
+an earlier, richer one recorded.
 
 ## Database Schema
 
@@ -258,11 +328,50 @@ webhookEvents: {
 }
 ```
 
-This schema lives entirely inside the component's isolated namespace — it will never collide with tables in your app's own `convex/schema.ts`.
+This schema lives entirely inside the component's isolated namespace — it will
+never collide with tables in your app's own `convex/schema.ts`.
 
 ## Authentication
 
-Vapi supports several ways to authenticate outgoing webhook requests. This component implements the original and simplest one: a shared secret you set on the assistant's `server.secret` field, which Vapi echoes back verbatim in the `X-Vapi-Secret` header on every request — verified here with a constant-time string comparison. Vapi's newer configurable-HMAC system (a separate Custom Credential resource with a selectable algorithm and signature header) is not implemented, since it requires provisioning that Credential outside of the assistant's own configuration; if you need it, verify the signature yourself before the request reaches this component's `webhookHandler`.
+Vapi supports several ways to authenticate outgoing webhook requests. This
+component implements the original and simplest one: a shared secret you set on
+the assistant's `server.secret` field, which Vapi echoes back verbatim in the
+`X-Vapi-Secret` header on every request — verified here with a constant-time
+string comparison. Vapi's newer configurable-HMAC system (a separate Custom
+Credential resource with a selectable algorithm and signature header) is not
+implemented, since it requires provisioning that Credential outside of the
+assistant's own configuration; if you need it, verify the signature yourself
+before the request reaches this component's `webhookHandler`.
+
+## Example App
+
+The `example/` app is a full interactive demo, not just a form:
+
+- **Calls** — place a call (with a live-updating list for that assistant,
+  reactively reflected the instant the action call returns — no waiting on the
+  webhook), and a stats bar showing total/live/ended calls plus webhook
+  deliveries, visible from every tab.
+- **Webhooks** — a live, expandable feed of every raw delivery to
+  `/webhooks/vapi`, so you can watch signature verification and deduplication
+  happen in real time.
+- **History** — every call this component has ever recorded, newest first,
+  across every assistant, with status, cost, duration, and an expandable
+  transcript.
+- A sidebar **Activity** console logging every action call this demo makes, with
+  its result or error.
+
+Run it from the repo root (not `example/`):
+
+```sh
+npm install --legacy-peer-deps
+npx convex env set VAPI_API_KEY your-private-api-key
+npx convex env set VAPI_WEBHOOK_SECRET whsec_...
+npm run dev
+```
+
+Then point a test assistant's `serverUrl` at
+`https://<your-dev-deployment>.convex.site/webhooks/vapi` (see
+[Quick Start](#quick-start)) to see live deliveries land in the Webhooks tab.
 
 ## Testing
 
@@ -271,24 +380,51 @@ npm run test
 npm run typecheck
 ```
 
-Tests use [`convex-test`](https://www.npmjs.com/package/convex-test) and cover `recordCall`'s merge-on-upsert behavior (confirming a sparser later event never blanks a richer earlier one), `listCallsByAssistant` scoping by assistant, and webhook idempotency via `checkAndRecordEvent`.
+Tests use [`convex-test`](https://www.npmjs.com/package/convex-test) and cover
+`recordCall`'s merge-on-upsert behavior (confirming a sparser later event never
+blanks a richer earlier one, and that a late, out-of-order `status-update` can
+never regress a call back out of `ended`), `listCallsByAssistant` scoping by
+assistant, webhook idempotency via `checkAndRecordEvent`, and the dashboard
+queries (`getStats`, `listRecentCalls`, `listRecentWebhookEvents`) used by the
+example app.
 
 ## Limitations
 
-- Only `status-update` and `end-of-call-report` message types update the `calls` table. `transcript` (partial live captions), `conversation-update`, `speech-update`, `tool-calls`, and other real-time message types are accepted (and recorded in `webhookEvents` for auditing) but not persisted to `calls` — storing every partial transcript chunk would be high-volume and is better handled with your own streaming UI if you need live captions.
-- Assistant and phone number management (creating, updating, or listing assistants) is out of scope — this component tracks calls, not the resources that place them.
-- Live in-call control (e.g. programmatically ending an active call, or transferring it) is not implemented; only `createCall` (start) and `refreshCall` (poll) are provided.
-- Rate limits are Vapi's own — this component does not implement its own rate limiting or backoff.
+- Only `status-update` and `end-of-call-report` message types update the `calls`
+  table. `transcript` (partial live captions), `conversation-update`,
+  `speech-update`, `tool-calls`, and other real-time message types are accepted
+  (and recorded in `webhookEvents` for auditing) but not persisted to `calls` —
+  storing every partial transcript chunk would be high-volume and is better
+  handled with your own streaming UI if you need live captions.
+- Assistant and phone number management (creating, updating, or listing
+  assistants) is out of scope — this component tracks calls, not the resources
+  that place them.
+- Live in-call control (e.g. programmatically ending an active call, or
+  transferring it) is not implemented; only `createCall` (start) and
+  `refreshCall` (poll) are provided.
+- Rate limits are Vapi's own — this component does not implement its own rate
+  limiting or backoff.
 
 ## Troubleshooting
 
-**Webhook returns 401** — the `X-Vapi-Secret` header didn't match. Confirm the assistant's `server.secret` field is set to exactly the same value as `VAPI_WEBHOOK_SECRET` (a `PATCH /assistant/{id}` call, or the dashboard's assistant settings, both work).
+**Webhook returns 401** — the `X-Vapi-Secret` header didn't match. Confirm the
+assistant's `server.secret` field is set to exactly the same value as
+`VAPI_WEBHOOK_SECRET` (a `PATCH /assistant/{id}` call, or the dashboard's
+assistant settings, both work).
 
-**Webhook returns 400 "Missing X-Vapi-Secret header"** — the assistant's `serverUrl` is set but `server.secret` isn't configured, so Vapi isn't sending the header at all.
+**Webhook returns 400 "Missing X-Vapi-Secret header"** — the assistant's
+`serverUrl` is set but `server.secret` isn't configured, so Vapi isn't sending
+the header at all.
 
-**Calls never appear in queries** — confirm the assistant's `serverUrl` points at your deployment's `.convex.site` domain (not `.convex.cloud`), and that it's reachable publicly (Convex HTTP actions are public by default, so this is usually a typo in the URL).
+**Calls never appear in queries** — confirm the assistant's `serverUrl` points
+at your deployment's `.convex.site` domain (not `.convex.cloud`), and that it's
+reachable publicly (Convex HTTP actions are public by default, so this is
+usually a typo in the URL).
 
-**Transcript/summary are missing after a call ends** — these only arrive with the `end-of-call-report` message, sent shortly after the call ends; call `refreshCall` if you need them sooner than the webhook arrives, or if a delivery was dropped.
+**Transcript/summary are missing after a call ends** — these only arrive with
+the `end-of-call-report` message, sent shortly after the call ends; call
+`refreshCall` if you need them sooner than the webhook arrives, or if a delivery
+was dropped.
 
 ## Contributing
 
