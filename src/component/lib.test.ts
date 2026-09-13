@@ -30,6 +30,31 @@ describe("calls", () => {
     expect(call?.summary).toBe("Customer asked about pricing.");
   });
 
+  test("recordCall never lets a late, out-of-order status-update regress a call away from ended", async () => {
+    const t = initConvexTest();
+
+    // The end-of-call-report arrives first and marks the call ended.
+    await t.mutation(api.lib.recordCall, {
+      callId: "call_2",
+      assistantId: "assistant_1",
+      status: "ended",
+      endedReason: "customer-ended-call",
+    });
+
+    // Vapi gives no delivery ordering guarantee, so a status-update from
+    // earlier in the call can still arrive after the end-of-call-report.
+    // It must not regress the call's status back to an in-progress state.
+    await t.mutation(api.lib.recordCall, {
+      callId: "call_2",
+      assistantId: "assistant_1",
+      status: "in-progress",
+    });
+
+    const call = await t.query(api.lib.getCall, { callId: "call_2" });
+    expect(call?.status).toBe("ended");
+    expect(call?.endedReason).toBe("customer-ended-call");
+  });
+
   test("listCallsByAssistant scopes by assistantId", async () => {
     const t = initConvexTest();
 

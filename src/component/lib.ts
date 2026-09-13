@@ -74,12 +74,21 @@ export const recordCall = mutation({
       // Merge rather than blanket-overwrite: a later, sparser event (e.g. a
       // status-update with no transcript yet) must never erase fields an
       // earlier, richer event (e.g. end-of-call-report) already recorded.
+      //
+      // status is a special case: Vapi's webhook deliveries carry no
+      // timestamp or sequence number, and delivery order is never
+      // guaranteed by any webhook provider, so a status-update that
+      // arrives late could otherwise regress a call backward (e.g. from
+      // "ended" back to "ringing"). "ended" is the one status Vapi never
+      // revises once sent, so once we've recorded it, later events are
+      // treated as stragglers and can't downgrade it back.
+      const status = existing.status === "ended" ? existing.status : args.status;
       const merged = {
         callId: args.callId,
         assistantId: args.assistantId ?? existing.assistantId,
         phoneNumberId: args.phoneNumberId ?? existing.phoneNumberId,
         customerNumber: args.customerNumber ?? existing.customerNumber,
-        status: args.status,
+        status,
         endedReason: args.endedReason ?? existing.endedReason,
         transcript: args.transcript ?? existing.transcript,
         summary: args.summary ?? existing.summary,
