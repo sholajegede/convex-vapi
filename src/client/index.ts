@@ -46,8 +46,12 @@ function callRecordFromApiObject(call: Record<string, unknown>) {
     customerNumber: (customer?.number as string) ?? undefined,
     status: (call.status as string) ?? "unknown",
     endedReason: (call.endedReason as string) ?? undefined,
-    startedAt: call.startedAt ? new Date(call.startedAt as string).getTime() : undefined,
-    endedAt: call.endedAt ? new Date(call.endedAt as string).getTime() : undefined,
+    startedAt: call.startedAt
+      ? new Date(call.startedAt as string).getTime()
+      : undefined,
+    endedAt: call.endedAt
+      ? new Date(call.endedAt as string).getTime()
+      : undefined,
     cost: (call.cost as number) ?? undefined,
   };
 }
@@ -67,10 +71,13 @@ export class Vapi {
       const secretHeader = request.headers.get("x-vapi-secret");
 
       if (!secretHeader) {
-        return new Response(JSON.stringify({ error: "Missing X-Vapi-Secret header" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Missing X-Vapi-Secret header" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (!timingSafeEqual(secretHeader, webhookSecret)) {
@@ -85,33 +92,44 @@ export class Vapi {
       // detected by hashing the raw payload itself.
       const eventId = await sha256Hex(rawBody);
 
-      const payload = JSON.parse(rawBody) as { message?: Record<string, unknown> };
+      const payload = JSON.parse(rawBody) as {
+        message?: Record<string, unknown>;
+      };
       const message = payload.message ?? {};
       const eventType = (message.type as string) ?? "unknown";
       const call = message.call as Record<string, unknown> | undefined;
       const callId = call?.id ? String(call.id) : undefined;
 
-      const { alreadyProcessed } = await ctx.runMutation(component_.lib.checkAndRecordEvent, {
-        eventId,
-        eventType,
-        callId,
-        payload: rawBody,
-      });
+      const { alreadyProcessed } = await ctx.runMutation(
+        component_.lib.checkAndRecordEvent,
+        {
+          eventId,
+          eventType,
+          callId,
+          payload: rawBody,
+        },
+      );
 
       if (alreadyProcessed) {
-        return new Response(JSON.stringify({ success: true, duplicate: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ success: true, duplicate: true }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (eventType === "status-update" && call) {
         await ctx.runMutation(component_.lib.recordCall, {
           ...callRecordFromApiObject(call),
-          status: (message.status as string) ?? (call.status as string) ?? "unknown",
+          status:
+            (message.status as string) ?? (call.status as string) ?? "unknown",
         });
       } else if (eventType === "end-of-call-report" && call) {
-        const artifact = message.artifact as Record<string, unknown> | undefined;
+        const artifact = message.artifact as
+          | Record<string, unknown>
+          | undefined;
         await ctx.runMutation(component_.lib.recordCall, {
           ...callRecordFromApiObject(call),
           status: "ended",
@@ -120,7 +138,8 @@ export class Vapi {
           summary: (artifact?.summary as string) ?? undefined,
           recordingUrl:
             (artifact?.recordingUrl as string) ??
-            ((artifact?.recording as Record<string, unknown> | undefined)?.stereoUrl as string) ??
+            ((artifact?.recording as Record<string, unknown> | undefined)
+              ?.stereoUrl as string) ??
             undefined,
         });
       }
@@ -157,13 +176,21 @@ export class Vapi {
       }),
     });
     if (!res.ok) {
-      throw new Error(`Failed to create Vapi call: ${res.status} ${await res.text()}`);
+      throw new Error(
+        `Failed to create Vapi call: ${res.status} ${await res.text()}`,
+      );
     }
     const json = (await res.json()) as Record<string, unknown>;
 
-    await ctx.runMutation(this.component.lib.recordCall, callRecordFromApiObject(json));
+    await ctx.runMutation(
+      this.component.lib.recordCall,
+      callRecordFromApiObject(json),
+    );
 
-    return { callId: String(json.id), status: (json.status as string) ?? "queued" };
+    return {
+      callId: String(json.id),
+      status: (json.status as string) ?? "queued",
+    };
   }
 
   /** Fetches the latest call state directly from the Vapi API and re-records it. */
@@ -176,7 +203,9 @@ export class Vapi {
       headers: this.headers(),
     });
     if (!res.ok) {
-      throw new Error(`Failed to fetch Vapi call: ${res.status} ${await res.text()}`);
+      throw new Error(
+        `Failed to fetch Vapi call: ${res.status} ${await res.text()}`,
+      );
     }
     const json = (await res.json()) as Record<string, unknown>;
     const artifact = json.artifact as Record<string, unknown> | undefined;
@@ -193,8 +222,26 @@ export class Vapi {
     return await ctx.runQuery(this.component.lib.getCall, args);
   }
 
-  async listCallsByAssistant(ctx: RunQueryCtx, args: { assistantId: string; limit?: number }) {
+  async listCallsByAssistant(
+    ctx: RunQueryCtx,
+    args: { assistantId: string; limit?: number },
+  ) {
     return await ctx.runQuery(this.component.lib.listCallsByAssistant, args);
+  }
+
+  async getStats(ctx: RunQueryCtx) {
+    return await ctx.runQuery(this.component.lib.getStats, {});
+  }
+
+  async listRecentCalls(ctx: RunQueryCtx, args: { limit?: number } = {}) {
+    return await ctx.runQuery(this.component.lib.listRecentCalls, args);
+  }
+
+  async listRecentWebhookEvents(
+    ctx: RunQueryCtx,
+    args: { limit?: number } = {},
+  ) {
+    return await ctx.runQuery(this.component.lib.listRecentWebhookEvents, args);
   }
 }
 

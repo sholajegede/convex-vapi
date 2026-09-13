@@ -40,3 +40,24 @@ export const listCallsByAssistant = query({
     return await vapi.listCallsByAssistant(ctx, args);
   },
 });
+
+export const getStats = query({
+  args: {},
+  handler: async (ctx) => {
+    return await vapi.getStats(ctx);
+  },
+});
+
+export const listRecentCalls = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    return await vapi.listRecentCalls(ctx, args);
+  },
+});
+
+export const listRecentWebhookEvents = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    return await vapi.listRecentWebhookEvents(ctx, args);
+  },
+});

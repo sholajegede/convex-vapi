@@ -77,6 +77,73 @@ describe("calls", () => {
   });
 });
 
+describe("dashboard queries", () => {
+  test("getStats counts calls by status and webhook events", async () => {
+    const t = initConvexTest();
+
+    await t.mutation(api.lib.recordCall, { callId: "call_a", status: "ended" });
+    await t.mutation(api.lib.recordCall, {
+      callId: "call_b",
+      status: "ringing",
+    });
+    await t.mutation(api.lib.recordCall, {
+      callId: "call_c",
+      status: "in-progress",
+    });
+    await t.mutation(api.lib.checkAndRecordEvent, {
+      eventId: "hash_a",
+      eventType: "status-update",
+      payload: "{}",
+    });
+
+    const stats = await t.query(api.lib.getStats, {});
+    expect(stats).toEqual({
+      callCount: 3,
+      endedCount: 1,
+      liveCount: 2,
+      webhookEventCount: 1,
+    });
+  });
+
+  test("listRecentCalls returns calls most-recently-updated first", async () => {
+    const t = initConvexTest();
+
+    await t.mutation(api.lib.recordCall, {
+      callId: "call_old",
+      status: "ended",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await t.mutation(api.lib.recordCall, {
+      callId: "call_new",
+      status: "ended",
+    });
+
+    const recent = await t.query(api.lib.listRecentCalls, { limit: 10 });
+    expect(recent.map((c) => c.callId)).toEqual(["call_new", "call_old"]);
+  });
+
+  test("listRecentWebhookEvents returns events most-recent first", async () => {
+    const t = initConvexTest();
+
+    await t.mutation(api.lib.checkAndRecordEvent, {
+      eventId: "hash_old",
+      eventType: "status-update",
+      payload: "{}",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await t.mutation(api.lib.checkAndRecordEvent, {
+      eventId: "hash_new",
+      eventType: "end-of-call-report",
+      payload: "{}",
+    });
+
+    const recent = await t.query(api.lib.listRecentWebhookEvents, {
+      limit: 10,
+    });
+    expect(recent.map((e) => e.eventId)).toEqual(["hash_new", "hash_old"]);
+  });
+});
+
 describe("webhook idempotency", () => {
   test("checkAndRecordEvent flags duplicate payload hashes", async () => {
     const t = initConvexTest();

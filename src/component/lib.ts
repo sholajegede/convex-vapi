@@ -82,7 +82,8 @@ export const recordCall = mutation({
       // "ended" back to "ringing"). "ended" is the one status Vapi never
       // revises once sent, so once we've recorded it, later events are
       // treated as stragglers and can't downgrade it back.
-      const status = existing.status === "ended" ? existing.status : args.status;
+      const status =
+        existing.status === "ended" ? existing.status : args.status;
       const merged = {
         callId: args.callId,
         assistantId: args.assistantId ?? existing.assistantId,
@@ -101,7 +102,11 @@ export const recordCall = mutation({
       return existing._id;
     }
 
-    return await ctx.db.insert("calls", { ...args, createdAt: now, updatedAt: now });
+    return await ctx.db.insert("calls", {
+      ...args,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 
@@ -123,5 +128,66 @@ export const checkAndRecordEvent = mutation({
     }
     await ctx.db.insert("webhookEvents", { ...args, receivedAt: Date.now() });
     return { alreadyProcessed: false };
+  },
+});
+
+// ─── Dashboard queries ──────────────────────────────────────────────────────
+// These do full, un-indexed scans across every call/event the component has
+// ever recorded, on purpose — they power a demo's stats bar and activity
+// history, not high-volume production use.
+
+export const getStats = query({
+  args: {},
+  returns: v.object({
+    callCount: v.number(),
+    endedCount: v.number(),
+    liveCount: v.number(),
+    webhookEventCount: v.number(),
+  }),
+  handler: async (ctx) => {
+    const [calls, webhookEvents] = await Promise.all([
+      ctx.db.query("calls").collect(),
+      ctx.db.query("webhookEvents").collect(),
+    ]);
+    const live = (status: string) =>
+      status === "queued" || status === "ringing" || status === "in-progress";
+    return {
+      callCount: calls.length,
+      endedCount: calls.filter((c) => c.status === "ended").length,
+      liveCount: calls.filter((c) => live(c.status)).length,
+      webhookEventCount: webhookEvents.length,
+    };
+  },
+});
+
+export const listRecentCalls = query({
+  args: { limit: v.optional(v.number()) },
+  returns: v.array(callValidator),
+  handler: async (ctx, args) => {
+    const calls = await ctx.db.query("calls").collect();
+    return calls
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, args.limit ?? 20);
+  },
+});
+
+export const listRecentWebhookEvents = query({
+  args: { limit: v.optional(v.number()) },
+  returns: v.array(
+    v.object({
+      _id: v.id("webhookEvents"),
+      _creationTime: v.number(),
+      eventId: v.string(),
+      eventType: v.string(),
+      callId: v.optional(v.string()),
+      payload: v.string(),
+      receivedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const events = await ctx.db.query("webhookEvents").collect();
+    return events
+      .sort((a, b) => b.receivedAt - a.receivedAt)
+      .slice(0, args.limit ?? 20);
   },
 });
