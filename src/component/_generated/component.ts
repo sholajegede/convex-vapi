@@ -27,7 +27,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       checkAndRecordEvent: FunctionReference<
         "mutation",
         "internal",
-        { callId?: string; eventId: string; eventType: string; payload: string },
+        {
+          callId?: string;
+          eventId: string;
+          eventType: string;
+          payload: string;
+        },
         { alreadyProcessed: boolean },
         Name
       >;
@@ -55,6 +60,18 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         },
         Name
       >;
+      getStats: FunctionReference<
+        "query",
+        "internal",
+        {},
+        {
+          callCount: number;
+          endedCount: number;
+          liveCount: number;
+          webhookEventCount: number;
+        },
+        Name
+      >;
       listCallsByAssistant: FunctionReference<
         "query",
         "internal",
@@ -76,6 +93,45 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           summary?: string;
           transcript?: string;
           updatedAt: number;
+        }>,
+        Name
+      >;
+      listRecentCalls: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number },
+        Array<{
+          _creationTime: number;
+          _id: string;
+          assistantId?: string;
+          callId: string;
+          cost?: number;
+          createdAt: number;
+          customerNumber?: string;
+          endedAt?: number;
+          endedReason?: string;
+          phoneNumberId?: string;
+          recordingUrl?: string;
+          startedAt?: number;
+          status: string;
+          summary?: string;
+          transcript?: string;
+          updatedAt: number;
+        }>,
+        Name
+      >;
+      listRecentWebhookEvents: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number },
+        Array<{
+          _creationTime: number;
+          _id: string;
+          callId?: string;
+          eventId: string;
+          eventType: string;
+          payload: string;
+          receivedAt: number;
         }>,
         Name
       >;
