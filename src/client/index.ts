@@ -163,7 +163,7 @@ export class Vapi {
   }
 
   async createCall(
-    ctx: GenericActionCtx<GenericDataModel>,
+    ctx: RunMutationCtx,
     args: CreateCallArgs,
   ): Promise<{ callId: string; status: string }> {
     const res = await fetch(`${VAPI_API_BASE}/call`, {
@@ -195,7 +195,7 @@ export class Vapi {
 
   /** Fetches the latest call state directly from the Vapi API and re-records it. */
   async refreshCall(
-    ctx: GenericActionCtx<GenericDataModel>,
+    ctx: RunMutationCtx,
     args: { callId: string },
   ): Promise<void> {
     const res = await fetch(`${VAPI_API_BASE}/call/${args.callId}`, {
@@ -247,4 +247,14 @@ export class Vapi {
 
 type RunQueryCtx = {
   runQuery: GenericActionCtx<GenericDataModel>["runQuery"];
+};
+
+// createCall and refreshCall only ever call ctx.runMutation — never
+// runQuery, runAction, the scheduler, or storage. Typing them against this
+// minimal structural type instead of the full GenericActionCtx<GenericDataModel>
+// means they accept any real app's ActionCtx, whose DataModel is a concrete
+// set of tables (not assignable to the generic GenericDataModel once an app
+// defines any tables of its own).
+type RunMutationCtx = {
+  runMutation: GenericActionCtx<GenericDataModel>["runMutation"];
 };
