@@ -4,7 +4,7 @@ Sync Vapi voice AI calls into your Convex database reactively, and place
 outbound calls directly from Convex functions.
 
 [![npm version](https://img.shields.io/npm/v/convex-vapi)](https://www.npmjs.com/package/convex-vapi)
-[![Convex Component](https://www.convex.dev/components/badge/sholajegede/convex-vapi)](https://www.convex.dev/components/sholajegede/convex-vapi)
+[![Convex Component](https://www.convex.dev/components/badge/sholajegede/convex-vapi)](https://www.convex.dev/components/convex-vapi)
 [![npm downloads](https://img.shields.io/npm/dw/convex-vapi)](https://www.npmjs.com/package/convex-vapi)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
